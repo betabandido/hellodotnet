@@ -1,0 +1,63 @@
+pipeline {
+    agent {
+        kubernetes {
+            label 'build-pod'
+            defaultContainer 'jnlp'
+            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: docker
+    image: docker:stable
+    command:
+    - cat
+    tty: true
+    volumeMounts:
+    - name: docker-sock
+      mountPath: /var/run/docker.sock
+  volumes:
+  - name: docker-sock
+    hostPath:
+      path: /var/run/docker.sock
+"""
+        }
+    }
+    stages {
+        stage('Build') {
+            steps {
+                script {
+                    imageName = imageName()
+                }                
+                container('docker') {
+                    sh "docker build -t ${imageName} ."
+                }
+            }
+        }
+        stage('Publish') {
+            environment {
+                DOCKER_HUB_CREDS = credentials('dockerhub')
+            }            
+            steps {
+                container('docker') {
+                    sh "echo ${DOCKER_HUB_CREDS_PSW}" +
+                        " | docker login -u ${DOCKER_HUB_CREDS_USR} --password-stdin"
+                    sh "docker push ${imageName}"
+                }
+            }
+        }
+    }
+}
+
+def imageName() {
+    appName = 'hellodotnet'
+    tag = commitId()
+    return "betabandido/${appName}:${tag}"
+}
+
+def commitId() {
+    sh 'git rev-parse --short HEAD > commit-id'
+    return readFile('commit-id')
+        .replace('\n', '')
+        .replace('\r', '')
+}
