@@ -1,3 +1,5 @@
+appName = 'hellodotnet'
+
 pipeline {
     agent {
         kubernetes {
@@ -16,6 +18,11 @@ spec:
     volumeMounts:
     - name: docker-sock
       mountPath: /var/run/docker.sock
+  - name: k8s-deploy
+    image: betabandido/k8s-deploy
+    command:
+    - cat
+    tty: true
   volumes:
   - name: docker-sock
     hostPath:
@@ -27,7 +34,8 @@ spec:
         stage('Build') {
             steps {
                 script {
-                    imageName = imageName()
+                    imageTag = imageTag()
+                    imageName = "betabandido/${appName}:${imageTag}"
                 }                
                 container('docker') {
                     sh "docker build -t ${imageName} ."
@@ -46,16 +54,22 @@ spec:
                 }
             }
         }
+        stage('Deploy') {
+            steps {
+                container('k8s-deploy') {
+                    // TODO: find a good approach to be able to test multiple
+                    // branches at the same time.
+                    sh "helm upgrade -i" +
+                        " --namespace staging" +
+                        " --set image.tag=${imageTag}" +
+                        " ${appName} charts/${appName}"
+                }
+            }
+        }
     }
 }
 
-def imageName() {
-    appName = 'hellodotnet'
-    tag = commitId()
-    return "betabandido/${appName}:${tag}"
-}
-
-def commitId() {
+def imageTag() {
     sh 'git rev-parse --short HEAD > commit-id'
     return readFile('commit-id')
         .replace('\n', '')
