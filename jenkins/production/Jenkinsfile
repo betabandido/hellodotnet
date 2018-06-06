@@ -68,6 +68,7 @@ spec:
         // }
         stage('Test') {
             steps {
+                sh 'env'
                 script {
                     version = version()
                 }
@@ -78,7 +79,7 @@ spec:
 }
 
 def version() {
-    sh 'git tag -l --points-at HEAD > tag'
+    sh "git tag -l --points-at ${env.GIT_COMMIT} > tag"
     return readFile('tag')
         .replace('\n', '')
         .replace('\r', '')
