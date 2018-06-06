@@ -1,0 +1,82 @@
+appName = 'hellodotnet'
+
+pipeline {
+    agent {
+        kubernetes {
+            label 'build-pod'
+            defaultContainer 'jnlp'
+            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: docker
+    image: docker:stable
+    command:
+    - cat
+    tty: true
+    volumeMounts:
+    - name: docker-sock
+      mountPath: /var/run/docker.sock
+  - name: k8s-deploy
+    image: betabandido/k8s-deploy
+    command:
+    - cat
+    tty: true
+  volumes:
+  - name: docker-sock
+    hostPath:
+      path: /var/run/docker.sock
+"""
+        }
+    }
+    stages {
+        // stage('Build') {
+        //     steps {
+        //         script {
+        //             imageTag = imageTag()
+        //             imageName = "betabandido/${appName}:${imageTag}"
+        //         }                
+        //         container('docker') {
+        //             sh "docker build -t ${imageName} ."
+        //         }
+        //     }
+        // }
+        // stage('Publish') {
+        //     environment {
+        //         DOCKER_HUB_CREDS = credentials('dockerhub')
+        //     }            
+        //     steps {
+        //         container('docker') {
+        //             sh "echo ${DOCKER_HUB_CREDS_PSW}" +
+        //                 " | docker login -u ${DOCKER_HUB_CREDS_USR} --password-stdin"
+        //             sh "docker push ${imageName}"
+        //         }
+        //     }
+        // }
+        // stage('Deploy') {
+        //     steps {
+        //         container('k8s-deploy') {
+        //             // TODO: find a good approach to be able to test multiple
+        //             // branches at the same time.
+        //             sh "helm upgrade -i" +
+        //                 " --namespace staging" +
+        //                 " --set image.tag=${imageTag}" +
+        //                 " ${appName} charts/${appName}"
+        //         }
+        //     }
+        // }
+        stage('Test') {
+            steps {
+                echo 'Testing!!!'
+            }
+        }
+    }
+}
+
+def imageTag() {
+    sh 'git rev-parse --short HEAD > commit-id'
+    return readFile('commit-id')
+        .replace('\n', '')
+        .replace('\r', '')
+}
