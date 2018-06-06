@@ -31,55 +31,44 @@ spec:
         }
     }
     stages {
-        // stage('Build') {
-        //     steps {
-        //         script {
-        //             imageTag = imageTag()
-        //             imageName = "betabandido/${appName}:${imageTag}"
-        //         }                
-        //         container('docker') {
-        //             sh "docker build -t ${imageName} ."
-        //         }
-        //     }
-        // }
-        // stage('Publish') {
-        //     environment {
-        //         DOCKER_HUB_CREDS = credentials('dockerhub')
-        //     }            
-        //     steps {
-        //         container('docker') {
-        //             sh "echo ${DOCKER_HUB_CREDS_PSW}" +
-        //                 " | docker login -u ${DOCKER_HUB_CREDS_USR} --password-stdin"
-        //             sh "docker push ${imageName}"
-        //         }
-        //     }
-        // }
-        // stage('Deploy') {
-        //     steps {
-        //         container('k8s-deploy') {
-        //             // TODO: find a good approach to be able to test multiple
-        //             // branches at the same time.
-        //             sh "helm upgrade -i" +
-        //                 " --namespace staging" +
-        //                 " --set image.tag=${imageTag}" +
-        //                 " ${appName} charts/${appName}"
-        //         }
-        //     }
-        // }
-        stage('Test') {
+        stage('Publish') {
+            environment {
+                DOCKER_HUB_CREDS = credentials('dockerhub')
+            }            
             steps {
-                sh 'env'
                 script {
+                    imageTag = imageTag()
                     version = version()
+                    imageName = "betabandido/${appName}"
+                }                
+                container('docker') {
+                    sh "echo ${DOCKER_HUB_CREDS_PSW}" +
+                        " | docker login -u ${DOCKER_HUB_CREDS_USR} --password-stdin"
+                    sh "docker tag ${imageName}:${imageTag} ${imageName}:${version}"
+                    sh "docker push ${imageName}:${version}"
                 }
-                echo "Testing version ${version}!!!"
+            }
+        }
+        stage('Deploy') {
+            steps {
+                container('k8s-deploy') {
+                    sh 'apk add --no-cache ruby-mustache' // add to image
+                    sh "k8s/deploy.sh ${version}"
+                }
             }
         }
     }
 }
 
+def imageTag() {
+    sh 'git rev-parse --short HEAD > commit-id'
+    return readFile('commit-id')
+        .replace('\n', '')
+        .replace('\r', '')
+}
+
 def version() {
-    sh "git tag -l --points-at ${env.GIT_COMMIT} > tag"
+    sh 'git tag -l --points-at HEAD > tag'
     return readFile('tag')
         .replace('\n', '')
         .replace('\r', '')

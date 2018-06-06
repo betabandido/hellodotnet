@@ -1,0 +1,33 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: hellodotnet-{{{version}}}
+  labels:
+    app: hellodotnet
+spec:
+  replicas: 10
+  selector:
+    matchLabels:
+      app: hellodotnet
+  template:
+    metadata:
+      labels:
+        app: hellodotnet
+        version: {{{version}}}
+    spec:
+      containers:
+        - name: hellodotnet
+          image: betabandido/hellodotnet:{{{version}}}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
