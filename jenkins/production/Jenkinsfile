@@ -68,15 +68,18 @@ spec:
         // }
         stage('Test') {
             steps {
-                echo 'Testing!!!'
+                script {
+                    version = version()
+                }
+                echo "Testing version ${version}!!!"
             }
         }
     }
 }
 
-def imageTag() {
-    sh 'git rev-parse --short HEAD > commit-id'
-    return readFile('commit-id')
+def version() {
+    sh 'git tag -l --points-at HEAD > tag'
+    return readFile('tag')
         .replace('\n', '')
         .replace('\r', '')
 }
