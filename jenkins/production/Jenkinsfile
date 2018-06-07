@@ -52,7 +52,10 @@ spec:
         stage('Deploy') {
             steps {
                 container('k8s-deploy') {
-                    sh 'apk add --no-cache ruby-mustache' // add to image
+                    // add to image instead
+                    sh 'apk add --no-cache ruby ruby-rdoc ruby-irb'
+	                sh 'gem install mustache'
+
                     sh "k8s/deploy.sh ${version}"
                 }
             }
