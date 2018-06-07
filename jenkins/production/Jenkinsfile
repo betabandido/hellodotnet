@@ -56,7 +56,9 @@ spec:
                     sh 'apk add --no-cache ruby ruby-rdoc ruby-irb'
 	                sh 'gem install mustache'
 
-                    sh "k8s/deploy.sh ${version}"
+                    dir('k8s') {
+                        sh "deploy.sh ${version}"
+                    }                        
                 }
             }
         }
