@@ -57,8 +57,6 @@ spec:
 	                sh 'gem install mustache'
 
                     dir('k8s') {
-                        sh 'pwd'
-                        sh 'ls -la'
                         sh "./deploy.sh ${version}"
                     }                        
                 }
