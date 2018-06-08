@@ -1,0 +1,81 @@
+appName = 'hellodotnet'
+
+pipeline {
+    agent {
+        kubernetes {
+            label 'build-pod'
+            defaultContainer 'jnlp'
+            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: docker
+    image: docker:stable
+    command:
+    - cat
+    tty: true
+    volumeMounts:
+    - name: docker-sock
+      mountPath: /var/run/docker.sock
+  - name: k8s-deploy
+    image: betabandido/k8s-deploy
+    command:
+    - cat
+    tty: true
+  volumes:
+  - name: docker-sock
+    hostPath:
+      path: /var/run/docker.sock
+"""
+        }
+    }
+    stages {
+        stage('Publish') {
+            environment {
+                DOCKER_HUB_CREDS = credentials('dockerhub')
+            }            
+            steps {
+                script {
+                    imageTag = imageTag()
+                    version = version()
+                    imageName = "betabandido/${appName}"
+                }                
+                container('docker') {
+                    sh "echo ${DOCKER_HUB_CREDS_PSW}" +
+                        " | docker login -u ${DOCKER_HUB_CREDS_USR} --password-stdin"
+                    sh "docker pull ${imageName}:${imageTag}"
+                    sh "docker tag ${imageName}:${imageTag} ${imageName}:${version}"
+                    sh "docker push ${imageName}:${version}"
+                }
+            }
+        }
+        stage('Deploy') {
+            steps {
+                container('k8s-deploy') {
+                    // add to image instead
+                    sh 'apk add --no-cache ruby ruby-rdoc ruby-irb'
+	                sh 'gem install mustache'
+
+                    dir('k8s') {
+                        sh "./deploy.sh ${version}"
+                    }                        
+                }
+            }
+        }
+    }
+}
+
+def imageTag() {
+    sh 'git rev-parse --short HEAD > commit-id'
+    return readFile('commit-id')
+        .replace('\n', '')
+        .replace('\r', '')
+}
+
+def version() {
+    sh 'git tag -l --points-at HEAD > tag'
+    return readFile('tag')
+        .replace('\n', '')
+        .replace('\r', '')
+}
