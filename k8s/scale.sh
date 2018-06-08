@@ -23,7 +23,7 @@ function wait_for_deployment {
     kubectl rollout status deployment ${deployment}
 }
 
-kubectl scale --replicas=10 deploy ${canary_deployment}
+kubectl scale --replicas=5 deploy ${canary_deployment}
 wait_for_deployment ${canary_deployment}
 
 kubectl delete deploy ${current_deployment}
