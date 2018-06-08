@@ -9,7 +9,8 @@ namespace HelloService.Repositories
             { "en", "Hi!" },
             { "ca", "Hola!" },
             { "es", "Hola!" },
-            { "ja", "こんにちは" }
+            { "ja", "こんにちは" },
+            { "fr", "Bonjour!" }
         };
         
         public string GetGreeting(string language)
